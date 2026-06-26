@@ -30,3 +30,20 @@ def connect_db():
     conn.commit()
     return conn
 
+def get_salt(conn):
+    row = conn.execute(
+        "SELECT value FROM metadata WHERE key = ?",
+        ("salt",)
+    ).fetchone()
+
+    if row:
+        return row[0]
+
+    salt = os.urandom(16)
+    conn.execute(
+        "INSERT INTO metadata (key, value) VALUES (?, ?)",
+        ("salt", salt)
+    )
+    conn.commit()
+    return salt
+

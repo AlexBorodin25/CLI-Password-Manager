@@ -66,3 +66,19 @@ get_fernet(conn):
     key = get_key(master_password, salt)
     return Fernet(key)
 
+
+
+def menu():
+    print("Welcome to Password Manager")
+    print("1: Add or update password")
+    print("2: View Password")
+    print("3: Delete Password")
+    print("4: Exit")
+
+def main():
+    conn = connect_db()
+
+    while True:
+        menu()
+        choice = input("Enter your choice: ").strip()
+        if choice == "1":

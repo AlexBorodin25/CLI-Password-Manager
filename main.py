@@ -5,9 +5,11 @@ from pathlib import path
 import sqlite3
 
 from cryptography.fernet import Fernet
-
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 DB_PATH = Path("passwords.db")
+KDF_ITERATIONS = 600,000
 
 def connect_db():
     conn = sqlite3.connect(DB_PATH)
@@ -46,4 +48,15 @@ def get_salt(conn):
     )
     conn.commit()
     return salt
+
+def get_key(master_password, salt):
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations = KDF_ITERATIONS
+    )
+
+    key = kdf.derive(master_password.encode("utf-8"))
+    return base64.b64encode(key)
 

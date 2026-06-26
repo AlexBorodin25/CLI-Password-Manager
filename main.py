@@ -60,11 +60,33 @@ def get_key(master_password, salt):
     key = kdf.derive(master_password.encode("utf-8"))
     return base64.b64encode(key)
 
-get_fernet(conn):
+def get_fernet(conn):
     master_password = getpass.getpass('Enter master password: ')
     salt = get_salt(conn)
     key = get_key(master_password, salt)
     return Fernet(key)
+
+def add_password(conn):
+    username = input("Enter username: ").strip()
+    password = getpass.getpass('Enter password: ')
+
+    if not username or not password:
+        print("Invalid username or password")
+        return
+
+    fernet = get_fernet(conn)
+    encrypted_password = fernet.encrypt(password.encode("utf-8"))
+
+    conn.execute(
+        """
+        INSERT INTO passwords (username, encrypted_password)
+        VALUES (?, ?)
+        ON CONFLICT (username) DO UPDATE SET
+            encrypted_password = excluded.encrypted_password
+    """, (username, encrypted_password))
+
+    conn.commit()
+    print(f"Password saved for {username}.")
 
 
 
@@ -73,7 +95,8 @@ def menu():
     print("1: Add or update password")
     print("2: View Password")
     print("3: Delete Password")
-    print("4: Exit")
+    print("4: View stored Usernames")
+    print("5: Exit")
 
 def main():
     conn = connect_db()

@@ -1,7 +1,7 @@
 import base64
 import os
 import getpass
-from pathlib import path
+from pathlib import Path
 import sqlite3
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 DB_PATH = Path("passwords.db")
-KDF_ITERATIONS = 600,000
+KDF_ITERATIONS = 600_000
 
 def connect_db():
     conn = sqlite3.connect(DB_PATH)
@@ -23,8 +23,7 @@ def connect_db():
 
     conn.execute("""
         CREATE TABLE IF NOT EXISTS passwords (
-            service TEXT PRIMARY KEY,
-            username TEXT NOT NULL,
+            username TEXT PRIMARY KEY,
             encrypted_password BLOB NOT NULL
         )
     """)
@@ -58,7 +57,7 @@ def get_key(master_password, salt):
     )
 
     key = kdf.derive(master_password.encode("utf-8"))
-    return base64.b64encode(key)
+    return base64.urlsafe_b64encode(key)
 
 def get_fernet(conn):
     master_password = getpass.getpass('Enter master password: ')
@@ -170,7 +169,7 @@ def main():
         else:
             print("Invalid choice.")
 
-        conn.close()
+    conn.close()
 
-    if __name__ == "__main__":
-        main()
+if __name__ == "__main__":
+    main()

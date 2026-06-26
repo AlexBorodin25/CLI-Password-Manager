@@ -4,7 +4,7 @@ import getpass
 from pathlib import path
 import sqlite3
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
@@ -87,6 +87,33 @@ def add_password(conn):
 
     conn.commit()
     print(f"Password saved for {username}.")
+
+def get_password(conn):
+    username = input("Enter username: ").strip()
+
+    row = conn.execute(
+        """
+        SELECT encrypted_password FROM passwords WHERE username = ?
+        """, (username,)
+    ).fetchone()
+
+    if not row:
+        print(f"No Password found for {username}.")
+        return
+
+    encrypted_password = row[0]
+    fernet = get_fernet(conn)
+
+    try:
+        password = fernet.decrypt(encrypted_password).decode("utf-8")
+    except InvalidToken:
+        print("Could not decrypt password.")
+        return
+
+    print(f"Username: {username}")
+    print(f"Password: {password}")
+
+
 
 
 

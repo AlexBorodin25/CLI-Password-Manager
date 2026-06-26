@@ -114,8 +114,32 @@ def get_password(conn):
     print(f"Password: {password}")
 
 
+def delete_password(conn):
+    username = input("Enter username: ").strip()
 
+    cursor = conn.execute(
+        """DELETE FROM passwords WHERE username = ?""",
+        (username,)
+    )
+    conn.commit()
 
+    if cursor.rowcount:
+        print(f"Password deleted for {username}.")
+    else:
+        print(f"No password found for {username}.")
+
+def list_usernames(conn):
+    rows = conn.execute(
+        """SELECT username FROM passwords ORDER BY username"""
+    ).fetchall()
+
+    if not rows:
+        print("No passwords found.")
+        return
+
+    print("Usernames:")
+    for row in rows:
+        print(f" - {row[0]}")
 
 def menu():
     print("Welcome to Password Manager")

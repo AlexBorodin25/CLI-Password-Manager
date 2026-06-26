@@ -60,3 +60,9 @@ def get_key(master_password, salt):
     key = kdf.derive(master_password.encode("utf-8"))
     return base64.b64encode(key)
 
+get_fernet(conn):
+    master_password = getpass.getpass('Enter master password: ')
+    salt = get_salt(conn)
+    key = get_key(master_password, salt)
+    return Fernet(key)
+

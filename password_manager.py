@@ -10,6 +10,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 DB_PATH = Path("passwords.db")
 KDF_ITERATIONS = 600_000
+VERIFY_TOKEN = b"password-manager-check"
 
 def connect_db():
     conn = sqlite3.connect(DB_PATH)
@@ -59,11 +60,38 @@ def get_key(master_password, salt):
     key = kdf.derive(master_password.encode("utf-8"))
     return base64.urlsafe_b64encode(key)
 
+def verify_master_password(conn, fernet)
+    row = conn.execute(
+        "SELECT value FROM metadata WHERE key = ?",
+        ("verification_token",),
+    ).fetchone()
+
+    if row is None:
+        encrypted_password = fernet.encrypt(VERIFY_TOKEN)
+        conn.execute(
+            "INSERT INTO metadata (key, value) VALUES (?, ?)",
+            ("verification_token", encrypted_password)
+        )
+        conn.commit()
+        return
+
+    try:
+        decrypted_password = fernet.decrypt(row[0])
+    except InvalidToken:
+        raise ValueError("Incorrect master password.")
+
+    if decrypted_password != VERIFY_TOKEN:
+        raise ValueError("Incorrect master password.")
+
 def get_fernet(conn):
     master_password = getpass.getpass('Enter master password: ')
     salt = get_salt(conn)
     key = get_key(master_password, salt)
-    return Fernet(key)
+    fernet = Fernet(key)
+
+    verify_master_password(conn, fernet)
+
+    return fernet
 
 def add_password(conn):
     username = input("Enter username: ").strip()
@@ -73,7 +101,12 @@ def add_password(conn):
         print("Invalid username or password")
         return
 
-    fernet = get_fernet(conn)
+    try:
+        fernet = get_fernet(conn)
+    except ValueError as error:
+        print(error)
+        return
+
     encrypted_password = fernet.encrypt(password.encode("utf-8"))
 
     conn.execute(
@@ -101,7 +134,12 @@ def get_password(conn):
         return
 
     encrypted_password = row[0]
-    fernet = get_fernet(conn)
+
+    try:
+        fernet = get_fernet(conn)
+    except ValueError as error:
+        print(error)
+        return
 
     try:
         password = fernet.decrypt(encrypted_password).decode("utf-8")

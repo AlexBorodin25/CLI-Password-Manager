@@ -151,25 +151,27 @@ def menu():
 def main():
     conn = connect_db()
 
-    while True:
-        menu()
-        choice = input("Enter your choice: ").strip()
+    try:
+        while True:
+            menu()
+            choice = input("Enter your choice: ").strip()
 
-        if choice == "1":
-            add_password(conn)
-        elif choice == "2":
-            get_password(conn)
-        elif choice == "3":
-            delete_password(conn)
-        elif choice == "4":
-            list_usernames(conn)
-        elif choice == "5":
-            print("Goodbye!")
-            break
-        else:
-            print("Invalid choice.")
+            if choice == "1":
+                add_password(conn)
+            elif choice == "2":
+                get_password(conn)
+            elif choice == "3":
+                delete_password(conn)
+            elif choice == "4":
+                list_usernames(conn)
+            elif choice == "5":
+                print("Goodbye!")
+                break
+            else:
+                print("Invalid choice.")
 
-    conn.close()
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     main()

@@ -12,6 +12,7 @@ DB_PATH = Path("passwords.db")
 KDF_ITERATIONS = 600_000
 VERIFY_TOKEN = b"password-manager-check"
 
+
 def connect_db():
     conn = sqlite3.connect(DB_PATH)
 
@@ -32,35 +33,29 @@ def connect_db():
     conn.commit()
     return conn
 
+
 def get_salt(conn):
-    row = conn.execute(
-        "SELECT value FROM metadata WHERE key = ?",
-        ("salt",)
-    ).fetchone()
+    row = conn.execute("SELECT value FROM metadata WHERE key = ?", ("salt",)).fetchone()
 
     if row:
         return row[0]
 
     salt = os.urandom(16)
-    conn.execute(
-        "INSERT INTO metadata (key, value) VALUES (?, ?)",
-        ("salt", salt)
-    )
+    conn.execute("INSERT INTO metadata (key, value) VALUES (?, ?)", ("salt", salt))
     conn.commit()
     return salt
 
+
 def get_key(master_password, salt):
     kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=salt,
-        iterations = KDF_ITERATIONS
+        algorithm=hashes.SHA256(), length=32, salt=salt, iterations=KDF_ITERATIONS
     )
 
     key = kdf.derive(master_password.encode("utf-8"))
     return base64.urlsafe_b64encode(key)
 
-def verify_master_password(conn, fernet)
+
+def verify_master_password(conn, fernet):
     row = conn.execute(
         "SELECT value FROM metadata WHERE key = ?",
         ("verification_token",),
@@ -70,7 +65,7 @@ def verify_master_password(conn, fernet)
         encrypted_password = fernet.encrypt(VERIFY_TOKEN)
         conn.execute(
             "INSERT INTO metadata (key, value) VALUES (?, ?)",
-            ("verification_token", encrypted_password)
+            ("verification_token", encrypted_password),
         )
         conn.commit()
         return
@@ -83,8 +78,9 @@ def verify_master_password(conn, fernet)
     if decrypted_password != VERIFY_TOKEN:
         raise ValueError("Incorrect master password.")
 
+
 def get_fernet(conn):
-    master_password = getpass.getpass('Enter master password: ')
+    master_password = getpass.getpass("Enter master password: ")
     salt = get_salt(conn)
     key = get_key(master_password, salt)
     fernet = Fernet(key)
@@ -93,9 +89,10 @@ def get_fernet(conn):
 
     return fernet
 
+
 def add_password(conn):
     username = input("Enter username: ").strip()
-    password = getpass.getpass('Enter password: ')
+    password = getpass.getpass("Enter password: ")
 
     if not username or not password:
         print("Invalid username or password")
@@ -115,10 +112,13 @@ def add_password(conn):
         VALUES (?, ?)
         ON CONFLICT (username) DO UPDATE SET
             encrypted_password = excluded.encrypted_password
-    """, (username, encrypted_password))
+    """,
+        (username, encrypted_password),
+    )
 
     conn.commit()
     print(f"Password saved for {username}.")
+
 
 def get_password(conn):
     username = input("Enter username: ").strip()
@@ -126,7 +126,8 @@ def get_password(conn):
     row = conn.execute(
         """
         SELECT encrypted_password FROM passwords WHERE username = ?
-        """, (username,)
+        """,
+        (username,),
     ).fetchone()
 
     if not row:
@@ -152,12 +153,15 @@ def get_password(conn):
 
 
 def delete_password(conn):
+    try:
+        get_fernet(conn)
+    except ValueError as error:
+        print(error)
+        return
+
     username = input("Enter username: ").strip()
 
-    cursor = conn.execute(
-        """DELETE FROM passwords WHERE username = ?""",
-        (username,)
-    )
+    cursor = conn.execute("""DELETE FROM passwords WHERE username = ?""", (username,))
     conn.commit()
 
     if cursor.rowcount:
@@ -165,7 +169,14 @@ def delete_password(conn):
     else:
         print(f"No password found for {username}.")
 
+
 def list_usernames(conn):
+    try:
+        get_fernet(conn)
+    except ValueError as error:
+        print(error)
+        return
+
     rows = conn.execute(
         """SELECT username FROM passwords ORDER BY username"""
     ).fetchall()
@@ -178,6 +189,7 @@ def list_usernames(conn):
     for row in rows:
         print(f" - {row[0]}")
 
+
 def menu():
     print("Welcome to Password Manager")
     print("1: Add or update password")
@@ -185,6 +197,7 @@ def menu():
     print("3: Delete Password")
     print("4: View stored Usernames")
     print("5: Exit")
+
 
 def main():
     conn = connect_db()
@@ -210,6 +223,7 @@ def main():
 
     finally:
         conn.close()
+
 
 if __name__ == "__main__":
     main()
